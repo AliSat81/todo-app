@@ -4,10 +4,10 @@ import { PageContainer } from '@toolpad/core';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import schema from "@/lib/validationSchemas/addEditTaskSchema"
-import { TextField, Button, MenuItem, FormControl, InputLabel, Select, RadioGroup, FormControlLabel, Radio, Box, Snackbar, Alert } from '@mui/material';
+import { TextField, MenuItem, FormControl, InputLabel, Select, RadioGroup, FormControlLabel, Radio, Box, Snackbar, Alert } from '@mui/material';
 import LoadingButton from '@mui/lab/LoadingButton';
-import { getValue, styled } from '@mui/system';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { styled } from '@mui/system';
+import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 
 
@@ -17,11 +17,10 @@ const FormContainer = styled(Box)({
   alignItems: 'center',
 });
 
-function TaskPage() {
+function TaskPage(props) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const id = searchParams.get('id');
-  const status = searchParams.get('status');
+  const id = props?.searchParams?.id;
+  const status = props?.searchParams?.status;
   const [loading, setLoading] = React.useState(false);
   const [snackbar, setSnackbar] = React.useState({ open: false, success: true, message: '' });
   const [selectedTask, setSelectedTask] = React.useState([]);
