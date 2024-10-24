@@ -4,6 +4,7 @@ import Providers from "./store/Providers";
 import { AppProvider } from '@toolpad/core/nextjs';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 import { ListAlt } from "@mui/icons-material";
+import { Suspense } from "react";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -42,13 +43,15 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <Providers>
-          <AppRouterCacheProvider options={{ enableCssLayer: true }}>
-            <AppProvider navigation={NAVIGATION} branding={BRANDING}>
-              {children}
-            </AppProvider>
-          </AppRouterCacheProvider>
-        </Providers>
+        <Suspense fallback={<div>Loading...</div>}>
+          <Providers>
+            <AppRouterCacheProvider options={{ enableCssLayer: true }}>
+              <AppProvider navigation={NAVIGATION} branding={BRANDING}>
+                {children}
+              </AppProvider>
+            </AppRouterCacheProvider>
+          </Providers>
+        </Suspense>
       </body>
     </html>
   );
