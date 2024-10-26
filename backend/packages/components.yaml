@@ -1,0 +1,114 @@
+components:
+  schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: ['To Do', 'Doing', 'Done', 'Extra']
+        priorityTag:
+          type: string
+          enum: ['Medium', 'High', 'Low']
+        trackTag:
+          type: string
+          enum: ['On Track', 'Off Track', 'At Risk']
+        order:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      example:
+        id: 5ebac534954b54139806c113
+        title: "Design Homepage"
+        description: "Design the homepage for the new project."
+        status: "Doing"
+        priorityTag: "High"
+        trackTag: "On Track"
+        order: 1
+        createdAt: "2024-10-25T10:30:00Z"
+        updatedAt: "2024-10-26T12:00:00Z"
+
+    PaginatedTasks:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+        totalResults:
+          type: integer
+      example:
+        results:
+          - id: 5ebac534954b54139806c113
+            title: "Design Homepage"
+            description: "Design the homepage for the new project."
+            status: "Doing"
+            priorityTag: "High"
+            trackTag: "On Track"
+            order: 1
+            createdAt: "2024-10-25T10:30:00Z"
+            updatedAt: "2024-10-26T12:00:00Z"
+        page: 1
+        limit: 10
+        totalPages: 2
+        totalResults: 20
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: number
+        message:
+          type: string
+
+  responses:
+    TaskNotFound:
+      description: Task not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 404
+            message: Task not found
+
+    InvalidTaskData:
+      description: Invalid task data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 400
+            message: Invalid task data
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 500
+            message: Internal server error
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
