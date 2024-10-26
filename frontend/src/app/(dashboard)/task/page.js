@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import LoadingButton from '@mui/lab/LoadingButton';
 import { styled } from '@mui/system';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { createTask, deleteTask, updateTask } from '@/app/store/slices/todoSlice';
 import { STATUSES } from '@/lib/constant';
@@ -81,10 +81,14 @@ const CustomRadioGroup = React.memo(({ label, options, value, onChange, error, d
 
 CustomRadioGroup.displayName = 'CustomRadioGroup';
 
-function TaskPage({ searchParams }) {
+function TaskPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch();
-  const { id, status, mode } = searchParams || {};
+  
+  const id = searchParams.get('id');
+  const status = searchParams.get('status');
+  const mode = searchParams.get('mode');
   const isViewMode = mode === 'view';
 
   const [isLoading, setIsLoading] = React.useState(false);
@@ -181,6 +185,7 @@ function TaskPage({ searchParams }) {
     Object.entries(selectedTask || {}).forEach(([key, value]) => {
       setValue(key, value);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, selectedTask]);
 
   return (
