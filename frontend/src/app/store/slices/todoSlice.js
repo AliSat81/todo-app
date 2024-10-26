@@ -1,200 +1,261 @@
+import axiosInstance from "@/lib/axiosConfig";
+// import { STATUSES } from "@/lib/constant";
+import { deleteProps, statusFormatter } from "@/lib/helper";
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
-
 
 const initialState = {
-    data: {
-        done: [
-            {
-            id: 1,
-            title: "Do something nice for someone you care about",
-            completed: false,
-            group: "favorite",
-            description: "sadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddasdsadsadddddsadasdasddddddddddddddsadasdasddddddddddddddsadasdasddddddddddddddasdasddddddddddddddsadasdasddddddddddddddali",
-            order: "1",
-            status: "Done",
-            priorityTag: "Low",
-            trackTag: "At Risk",
-            userId: 152
-            },
-            {
-            id: 2,
-            title: "Memorize a poem",
-            completed: true,
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "2",
-            status: "Done",
-            userId: 13
-            },
-            {
-            id: 3,
-            title: "Watch a classic movie",
-            completed: true,
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "3",
-            status: "Done",
-            userId: 68
-            },
-            {
-            id: 4,
-            title: "Watch a documentary",
-            completed: false,
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "4",
-            status: "Done",
-            userId: 84
-            },
-        ],
-        doing: [
-            {
-            id: 11,
-            title: "Do something nice for someone you care about",
-            status: "Doing",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "5",
-            priorityTag: "Medium",
-            trackTag: "At Risk",
-            userId: 152
-            },
-            {
-            id: 21,
-            title: "Memorize a poem",
-            status: "Doing",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "6",
-            userId: 13
-            },
-            {
-            id: 31,
-            title: "Watch a classic movie",
-            status: "Doing",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "7",
-            userId: 68
-            },
-            {
-            id: 41,
-            title: "Watch a documentary",
-            status: "Doing",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "8",
-            userId: 84
-            },
-        ],
-        todo: [
-            {
-            id: 12,
-            title: "Do something nice for someone you care about",
-            status: "To Do",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "9",
-            userId: 152
-            },
-            {
-            id: 22,
-            title: "Memorize a poem",
-            status: "To Do",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "10",
-            userId: 13
-            },
-            {
-            id: 32,
-            title: "Watch a classic movie",
-            status: "To Do",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "11",
-            userId: 68
-            },
-            {
-            id: 42,
-            title: "Watch a documentary",
-            status: "To Do",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "12",
-            userId: 84
-            },
-        ],
-        extra: [
-            {
-            id: 13,
-            title: "Do something nice for someone you care about",
-            status: "Extra",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "13",
-            userId: 152
-            },
-            {
-            id: 23,
-            title: "Memorize a poem",
-            status: "Extra",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "14",
-            userId: 13
-            },
-            {
-            id: 33,
-            title: "Watch a classic movie",
-            status: "Extra",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "15",
-            userId: 68
-            },
-            {
-            id: 43,
-            title: "Watch a documentary",
-            status: "Extra",
-            group: "favorite",
-            description: "sadasdasdddddddddddddd",
-            order: "16",
-            userId: 84
-            },
-        ],
-    },
-    status: 'idle', // status for async action (idle, loading, succeeded, failed)
-    error: null,
-}
+  data: {
+    todo: [],
+    doing: [],
+    done: [],
+    extra: []
+  },
+  loading: {
+    fetchTodos: false,
+    createTask: false,
+    updateTask: false,
+    deleteTask: false,
+    updateTaskStatus: false
+  },
+  error: {
+    fetchTodos: null,
+    createTask: null,
+    updateTask: null,
+    deleteTask: null,
+    updateTaskStatus: null
+  },
+  lastUpdated: null
+};
 
+// Helper function to handle API errors
+const handleApiError = (error) => {
+  const message = error.response?.data?.message || "An unexpected error occurred";
+  return { error: true, message };
+};
 
 // Async action to fetch todos
-export const fetchTodos = createAsyncThunk("todo/fetchTodos", async () => {
-    const response = await axios.get("https://dummyjson.com/todos");
-    return response?.data.todos; // Assuming the todos are in the 'todos' field
-  });
+export const fetchTodos = createAsyncThunk(
+  "todo/fetchTodos",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get("/task?groupBy=status");
+      return response?.data?.results;
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// Async action to update task status
+export const updateTaskStatus = createAsyncThunk(
+  "todo/updateTaskStatus",
+  async ({ taskId, status, previousStatus }, { rejectWithValue, dispatch }) => {
+    try {
+      const response = await axiosInstance.patch(`/task/${taskId}`, {status});
+      return { ...response.data, previousStatus };
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// Async action to add new task
+export const createTask = createAsyncThunk(
+  "todo/createTask",
+  async ({ body }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post(`/task`, body);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// Async action to update task
+export const updateTask = createAsyncThunk(
+  "todo/updateTask",
+  async ({ taskId, body, previousStatus }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.patch(`/task/${taskId}`, body);
+      return {...response.data, previousStatus};
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// Async action to delete task
+export const deleteTask = createAsyncThunk(
+  "todo/deleteTask",
+  async ({ taskId, status }, { rejectWithValue }) => {
+    try {
+      await axiosInstance.delete(`/task/${taskId}`);
+      return { taskId, status };
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
 
 const todoSlice = createSlice(
     {
         name: "todo",
         initialState,
         reducers: {
-            addToDo: (state, action) => {
-                return 0;
-            },
-            removeToDo: (state, action) => {
-                return 1;
-            },
-            editToDo: (state, action) => {
-                return 2;
-            }
-        }
+          clearErrors: (state) => {
+            state.error = initialState.error;
+          },
+        },
+        extraReducers: (builder) => {
+          builder
+            .addCase(fetchTodos.pending, (state) => {
+              state.loading.fetchTodos = true;
+              state.error.fetchTodos = null;
+            })
+            .addCase(fetchTodos.fulfilled, (state, action) => {
+              state.loading.fetchTodos = false;
+              state.error.fetchTodos = null;
+              state.data = {
+                done: action.payload.done || [],
+                doing: action.payload.doing || [],
+                todo: action.payload.todo || [],
+                extra: action.payload.extra || []
+              };
+              state.lastUpdated = new Date().toISOString();
+            })
+            .addCase(fetchTodos.rejected, (state) => {
+              state.loading.fetchTodos = false;
+              state.error.fetchTodos = action.payload;
+            })
+            .addCase(createTask.pending, (state) => {
+              state.loading.createTask = true;
+              state.error.createTask = null;
+            })
+            .addCase(createTask.fulfilled, (state, action) => {
+              state.loading.createTask = false;
+              state.error.createTask = null;
+            
+              const statusKey = statusFormatter(action.payload.status);
+            
+              if (!state.data[statusKey]) {
+                state.data[statusKey] = [];
+              }
+            
+              state.data[statusKey].push(action.payload);
+              state.lastUpdated = new Date().toISOString();
+            })
+            .addCase(createTask.rejected, (state, action) => {
+              state.loading.createTask = false;
+              state.error.createTask = action.payload;
+            })
+            .addCase(updateTask.pending, (state) => {
+              state.loading.updateTask = true;
+              state.error.updateTask = null;
+            })
+            .addCase(updateTask.fulfilled, (state, action) => {
+              state.loading.updateTask = false;
+              state.error.updateTask = null;
+              const prevStatusKey = statusFormatter(action.payload.previousStatus);
+              const newStatusKey = statusFormatter(action.payload.status);
+            
+              const taskIndex = state.data[prevStatusKey].findIndex(
+                (task) => task.id === action.payload.id
+              );
+            
+              if (taskIndex > -1) {
+                if (prevStatusKey === newStatusKey) {
+                  state.data[prevStatusKey][taskIndex] = {
+                    ...state.data[prevStatusKey][taskIndex],
+                    ...action.payload
+                  };
+                  delete state.data[prevStatusKey][taskIndex].previousStatus;
+            
+                } else {
+                  const taskData = { 
+                    ...state.data[prevStatusKey][taskIndex],
+                    ...action.payload,
+                    status: action.payload.status
+                  };
+            
+                  state.data[prevStatusKey].splice(taskIndex, 1);
+                  delete taskData.previousStatus;
+            
+                  state.data[newStatusKey].push(taskData);
+                }
+              }
+            
+              state.lastUpdated = new Date().toISOString();
+            })
+            .addCase(updateTask.rejected, (state, action) => {
+              state.loading.updateTask = false;
+              state.error.updateTask = action.payload;
+            })
+            .addCase(updateTaskStatus.pending, (state) => {
+              state.loading.updateTaskStatus = true;
+              state.error.updateTaskStatus = null;
+            })
+            .addCase(updateTaskStatus.fulfilled, (state, action) => {
+              state.loading.updateTaskStatus = false;
+              state.error.updateTaskStatus = null;
+              const prevStatusKey = statusFormatter(action.payload.previousStatus);
+              const newStatusKey = statusFormatter(action.payload.status);
+            
+              const taskIndex = state.data[prevStatusKey].findIndex(
+                (task) => task.id === action.payload.id
+              );
+            
+              if (taskIndex > -1) {
+                const taskData = { ...state.data[prevStatusKey][taskIndex] };
+            
+                state.data[prevStatusKey].splice(taskIndex, 1);
+            
+                taskData.status = action.payload.status;
+                deleteProps(taskData, 'previousStatus');
+            
+                state.data[newStatusKey].push(taskData);
+              }
+            
+              state.lastUpdated = new Date().toISOString();
+            })
+            .addCase(updateTaskStatus.rejected, (state, action) => {
+              state.loading.updateTaskStatus = false;
+              state.error.updateTaskStatus = action.payload;
+            })
+            .addCase(deleteTask.pending, (state) => {
+              state.loading.deleteTask = true;
+              state.error.deleteTask = null;
+            })
+            .addCase(deleteTask.fulfilled, (state, action) => {
+              state.loading.deleteTask = false;
+              state.error.deleteTask = null;
+              const statusKey = statusFormatter(action.payload.status);
+              state.data[statusKey] = state.data[statusKey].filter(
+                task => task.id !== action.payload.taskId
+              );
+              state.lastUpdated = new Date().toISOString();
+            })
+            .addCase(deleteTask.rejected, (state, action) => {
+              state.loading.deleteTask = false;
+              state.error.deleteTask = action.payload;
+            });
+        },
     }
 )
 
 
-export const { addToDo, removeToDo, editToDo } = todoSlice.actions;
+export const { clearErrors } = todoSlice.actions;
+
+export const selectTodosByStatus = (state, status) => 
+  state.todo.data[status.toLowerCase()] || [];
+
+export const selectLoadingState = (state, operation) => 
+  state.todo.loading[operation];
+
+export const selectError = (state, operation) => 
+  state.todo.error[operation];
+
+export const selectLastUpdated = (state) => 
+  state.todo.lastUpdated;
 
 export default todoSlice.reducer;

@@ -1,11 +1,12 @@
 import * as yup from 'yup';
+import { STATUSES } from '../constant';
 
-// Yup validation schema
+// validation schema
 const schema = yup.object().shape({
     title: yup.string().required('Title is required'),
     description: yup.string(), // Optional
     status: yup.string()
-      .oneOf(['To Do', 'Doing', 'Done', 'Extra'], 'Invalid status')
+      .oneOf(STATUSES, 'Invalid status')
       .required('Status is required'),
     priorityTag: yup.string()
       .oneOf(['Medium', 'High', 'Low'], 'Invalid priority')

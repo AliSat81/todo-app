@@ -1,176 +1,314 @@
 "use client"
-import React, { useEffect } from 'react';
+import React from 'react';
 import { PageContainer } from '@toolpad/core';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import schema from "@/lib/validationSchemas/addEditTaskSchema"
-import { TextField, MenuItem, FormControl, InputLabel, Select, RadioGroup, FormControlLabel, Radio, Box, Snackbar, Alert } from '@mui/material';
+import schema from "@/lib/validationSchemas/addEditTaskSchema";
+import { 
+  TextField, 
+  MenuItem, 
+  FormControl, 
+  InputLabel, 
+  Select, 
+  RadioGroup, 
+  FormControlLabel, 
+  Radio, 
+  Box, 
+  Snackbar, 
+  Alert,
+  Button
+} from '@mui/material';
 import LoadingButton from '@mui/lab/LoadingButton';
 import { styled } from '@mui/system';
 import { useRouter } from 'next/navigation';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { createTask, deleteTask, updateTask } from '@/app/store/slices/todoSlice';
+import { STATUSES } from '@/lib/constant';
+import ConfirmationModal from '@/components/Modal';
+import { deleteProps, statusFormatter } from '@/lib/helper';
 
+const PRIORITY_OPTIONS = ['High', 'Medium', 'Low'];
+const TRACK_OPTIONS = ['On Track', 'Off Track', 'At Risk'];
 
 const FormContainer = styled(Box)({
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
+  padding: '20px',
+  maxWidth: '800px',
+  margin: '0 auto',
 });
 
-function TaskPage(props) {
-  const router = useRouter();
-  const id = props?.searchParams?.id;
-  const status = props?.searchParams?.status;
-  const [loading, setLoading] = React.useState(false);
-  const [snackbar, setSnackbar] = React.useState({ open: false, success: true, message: '' });
-  const [selectedTask, setSelectedTask] = React.useState([]);
+const TagsContainer = styled(Box)(({ theme }) => ({
+  justifyContent: "space-between", 
+  display: "flex", 
+  flexDirection: "row",
+  gap: theme.spacing(4),
+  marginBottom: theme.spacing(2),
+}));
 
-  // Select task data (if it's exist) from the Redux store, converting status to lowercase and removing spaces
-  const taskData = useSelector((state) => state?.todos?.data?.[status?.toLowerCase().replace(/\s+/g, '')]);
-  
+const TagSection = styled(Box)(({ theme }) => ({
+  display: "flex", 
+  flexDirection: "column",
+  flex: 1,
+}));
+
+const FormField = React.forwardRef(({ component: Component, ...props }, ref) => {
+  return <Component {...props} ref={ref} />;
+});
+
+FormField.displayName = 'FormField';
+
+const CustomRadioGroup = React.memo(({ label, options, value, onChange, error, disabled }) => (
+  <TagSection>
+    <InputLabel>{label}</InputLabel>
+    <FormControl component="fieldset" sx={{ mb: 2 }}>
+      <RadioGroup value={value} onChange={onChange}>
+        {options.map((option) => (
+          <FormControlLabel 
+            key={option} 
+            value={option} 
+            control={<Radio />} 
+            label={option}
+            disabled={disabled}
+          />
+        ))}
+      </RadioGroup>
+      {error && <p style={{ color: 'red', fontSize: '12px' }}>{error}</p>}
+    </FormControl>
+  </TagSection>
+));
+
+CustomRadioGroup.displayName = 'CustomRadioGroup';
+
+function TaskPage({ searchParams }) {
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const { id, status, mode } = searchParams || {};
+  const isViewMode = mode === 'view';
+
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [modal, setModal] = React.useState({
+    open: false,
+    title: "Delete Task",
+    caption: "Are you sure you want to delete this task?",
+    onConfirm: () => {
+      setModal({...modal, open: false});
+      handleDeleteTask();
+    },
+    onCancel: () => {setModal({...modal,open: false})}
+  });
+  const [snackbar, setSnackbar] = React.useState({ 
+    open: false, 
+    success: true, 
+    message: '' 
+  });
+
   const { register, handleSubmit, formState: { errors }, reset, setValue, getValues, watch } = useForm({
     resolver: yupResolver(schema),
+    defaultValues: {
+      status: status || '',
+    }
   });
-  const onSubmit = async (data) => {
-    setLoading(true);
-    // try {
-    //   console.log(data); // Simulate API call
-    //   // Simulate successful submission
-    //   setSnackbar({ open: true, success: true, message: 'Task added successfully!' });
-    //   reset(); // Reset form
-    // } catch (error) {
-    //   setSnackbar({ open: true, success: false, message: 'Failed to add task' });
-    // } finally {
-    //   setLoading(false);
-    // }
-  };
 
-  // Retrieve task data by status and id; alert and redirect if task not found.
-  React.useEffect(()=> {
-    // Exit early if the URL is in "add" mode (i.e., no ID present)
-    if(!id) return;
-  
-    // Find the specific task with the matching id
-    const task = taskData?.find(task => task?.id === parseInt(id));
-  
-    // Check if the selected task exists
-    if (!task) {
-      alert("This task doesn't exist!");
-      router.push(".")
-      return;
-    }
-  
-    // If the selected task exists, set its values in the form state
-    if (task) {
-      setSelectedTask(task);
-    }
+  const taskData = useSelector((state) => 
+    state?.todo?.data[statusFormatter(status)]
+  );
 
-
-  },[id, status]);
-
-  useEffect(()=> {
-    setValue('title', selectedTask?.title);
-    setValue('description', selectedTask?.description);
-    setValue('priorityTag', selectedTask?.priorityTag); 
-    setValue('trackTag', selectedTask?.trackTag)
-  },[selectedTask]);
+  const selectedTask = React.useMemo(() => 
+    id ? taskData?.find(task => task?.id === id) : null,
+    [id, taskData]
+  );
 
   const trackTagValue = watch('trackTag', selectedTask?.trackTag || "");
   const priorityTagValue = watch('priorityTag', selectedTask?.priorityTag || "");
 
+  const handleSnackbar = React.useCallback((success, message) => {
+    setSnackbar({ open: true, success, message });
+  }, []);
+
+  const handleFormSubmit = async (data) => {
+    if (isViewMode) return;
+    
+    deleteProps(data, ['id', 'createdAt', 'updatedAt']);
+    setIsLoading(true);
+    const body = Object.fromEntries(
+      Object.entries(data).filter(([_, value]) => value !== undefined && value !== '')
+    );
+
+    try {
+      if (!id) {
+        await dispatch(createTask({body})).unwrap();
+        handleSnackbar(true, 'Task added successfully!');
+      } else {
+        await dispatch(updateTask({taskId: id, body, previousStatus: status})).unwrap();
+        handleSnackbar(true, 'Task updated successfully!');
+      }
+      
+      setTimeout(() => router.push("."), 500);
+    } catch (error) {
+      console.error(error);
+      handleSnackbar(false, `Failed to ${id ? 'update' : 'add'} task.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (isViewMode) return;
+    
+    setIsDeleting(true);
+    try {
+      await dispatch(deleteTask({taskId: id, status})).unwrap();
+      handleSnackbar(true, 'Task deleted successfully!');
+      setTimeout(() => router.push("."), 500);
+    } catch (error) {
+      console.error(error);
+      handleSnackbar(false, 'Failed to delete task!');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBack = () => {
+    router.push(".");
+  };
+
+  React.useEffect(() => {
+    if (!id) return;
+    
+    Object.entries(selectedTask || {}).forEach(([key, value]) => {
+      setValue(key, value);
+    });
+  }, [id, selectedTask]);
+
   return (
     <>
-    <FormContainer>
-      <Box component="form" onSubmit={handleSubmit(onSubmit)} >
-        <PageContainer title={id ? "Edit Task" : "Add Task"} />
-        
-        {/* Title Field */}
-        <TextField
-          label="Title"
-          {...register('title')}
-          error={!!errors.title}
-          helperText={errors.title?.message}
-          fullWidth
-          sx={{ mb: 2 }}
-        />
+      <FormContainer>
+        <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} sx={{ width: '100%' }}>
+          <PageContainer title={isViewMode ? "View Task" : (id ? "Edit Task" : "Add Task")} />
+          
+          <FormField
+            component={TextField}
+            label="Title"
+            {...register('title')}
+            error={!!errors.title}
+            helperText={errors.title?.message}
+            fullWidth
+            sx={{ mb: 2 }}
+            disabled={isViewMode}
+          />
 
-        {/* Description Field */}
-        <TextField
-          label="Description"
-          {...register('description')}
-          error={!!errors.description}
-          helperText={errors.description?.message}
-          fullWidth
-          multiline
-          rows={3}
-          sx={{ mb: 2 }}
-        />
+          <FormField
+            component={TextField}
+            label="Description"
+            {...register('description')}
+            error={!!errors.description}
+            helperText={errors.description?.message}
+            fullWidth
+            multiline
+            rows={3}
+            sx={{ mb: 2 }}
+            disabled={isViewMode}
+          />
 
-        {/* Status Dropdown */}
-        <FormControl fullWidth error={!!errors.status} sx={{ mb: 2 }}>
-          <InputLabel>Status</InputLabel>
-          <Select
-            {...register('status')}
-            defaultValue={status || ""}
-          >
-            <MenuItem value="To Do">To Do</MenuItem>
-            <MenuItem value="Doing">Doing</MenuItem>
-            <MenuItem value="Done">Done</MenuItem>
-            <MenuItem value="Extra">Extra</MenuItem>
-          </Select>
-          {errors.status && <p style={{ color: 'red', fontSize: '12px' }}>{errors.status.message}</p>}
-        </FormControl>
+          <FormControl fullWidth error={!!errors.status} sx={{ mb: 2 }}>
+            <InputLabel>Status</InputLabel>
+            <Select {...register('status')} defaultValue={status || ""} disabled={isViewMode}>
+              {STATUSES.map((statusOption) => (
+                <MenuItem key={statusOption} value={statusOption}>
+                  {statusOption}
+                </MenuItem>
+              ))}
+            </Select>
+            {errors.status && 
+              <p style={{ color: 'red', fontSize: '12px' }}>{errors.status.message}</p>
+            }
+          </FormControl>
 
-        {/* Priority Tag Selection (Radio Group) */}
-        <Box sx={{ justifyContent: "space-between", display: "flex", flexDirection: "row"}}>
-        <Box sx={{  display: "flex", flexDirection: "column"}}>
-        <InputLabel>Priority</InputLabel>
-        <FormControl component="fieldset" sx={{ mb: 2 }}>
-          <RadioGroup
-            {...register('priorityTag')}
-            value={priorityTagValue}
-            onChange={(e) => setValue('priorityTag', e.target.value)}
-          >
-            <FormControlLabel value="High" control={<Radio />} label="High" />
-            <FormControlLabel value="Medium" control={<Radio />} label="Medium" />
-            <FormControlLabel value="Low" control={<Radio />} label="Low" />
-          </RadioGroup>
-          {errors.priorityTag && <p style={{ color: 'red', fontSize: '12px' }}>{errors.priorityTag.message}</p>}
-        </FormControl>
+          <TagsContainer>
+            <CustomRadioGroup
+              label="Priority"
+              options={PRIORITY_OPTIONS}
+              value={priorityTagValue}
+              onChange={(e) => setValue('priorityTag', e.target.value)}
+              error={errors.priorityTag?.message}
+              disabled={isViewMode}
+            />
+
+            <CustomRadioGroup
+              label="Track"
+              options={TRACK_OPTIONS}
+              value={trackTagValue}
+              onChange={(e) => setValue('trackTag', e.target.value)}
+              error={errors.trackTag?.message}
+              disabled={isViewMode}
+            />
+          </TagsContainer>
+
+          {isViewMode ? (
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              fullWidth 
+              onClick={handleBack}
+            >
+              Back
+            </Button>
+          ) : (
+            <>
+              <LoadingButton 
+                type="submit" 
+                variant="outlined" 
+                color="primary" 
+                fullWidth 
+                loading={isLoading} 
+                loadingPosition="end"
+              >
+                {id ? 'Save' : 'Add'}
+              </LoadingButton>
+
+              {id && (
+                <LoadingButton 
+                  variant="outlined" 
+                  color="error" 
+                  fullWidth 
+                  loading={isDeleting} 
+                  loadingPosition="end" 
+                  onClick={()=> setModal({...modal, open: true})} 
+                  sx={{ mt: 2 }}
+                >
+                  Delete Task
+                </LoadingButton>
+              )}
+            </>
+          )}
         </Box>
+      </FormContainer>
 
-        {/* Track Tag Selection (Radio Group) */}
-        <Box sx={{  display: "flex", flexDirection: "column"}}>
-        <InputLabel >Track</InputLabel>
-        <FormControl component="fieldset" sx={{ mb: 2 }}>
-        <RadioGroup
-          value={trackTagValue} 
-          onChange={(e) => setValue('trackTag', e.target.value)} 
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={4000} 
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+      >
+        <Alert 
+          severity={snackbar.success ? 'success' : 'error'} 
+          sx={{ width: '100%' }}
         >
-          <FormControlLabel value="On Track" control={<Radio />} label="On Track" />
-          <FormControlLabel value="Off Track" control={<Radio />} label="Off Track" />
-          <FormControlLabel value="At Risk" control={<Radio />} label="At Risk" />
-        </RadioGroup>
-          {errors.trackTag && <p style={{ color: 'red', fontSize: '12px' }}>{errors.trackTag.message}</p>}
-        </FormControl>
-        </Box>
-        </Box>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
-        {/* Submit Button */}
-        <LoadingButton type="submit" variant="outlined" color="primary" fullWidth loading={loading} loadingPosition="end">
-          {id ? 'Save' : 'Add'}
-        </LoadingButton>
-      </Box>
-    </FormContainer>
-
-    {/* Snackbar for feedback */}
-    <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })}>
-      <Alert severity={snackbar.success ? 'success' : 'error'} sx={{ width: '100%' }}>
-        {snackbar.message}
-      </Alert>
-    </Snackbar>
+      <ConfirmationModal 
+        title={modal?.title}
+        caption={modal?.caption}
+        open={modal?.open}
+        onConfirm={modal?.onConfirm}
+        onCancel={modal?.onCancel}
+      />
     </>
-);
+  );
 }
 
-export default TaskPage;
+export default React.memo(TaskPage);
