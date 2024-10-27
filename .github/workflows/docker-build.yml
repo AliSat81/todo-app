@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'backend/**'
+      - .github/workflows/**
 
 jobs:
   build:
@@ -27,11 +28,11 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t your-docker-username/todo-app:latest ./backend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/todo-app:latest ./backend
 
       - name: Push Docker image
         run: |
-          docker push your-docker-username/todo-app:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/todo-app:latest
 
   deploy:
     runs-on: ubuntu-latest
