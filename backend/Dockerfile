@@ -17,9 +17,9 @@ FROM base as production
 
 WORKDIR /usr/prod/app
 
-ENV NODE_ENV=production
-
 COPY package.json yarn.lock ecosystem.config.json ./
+
+RUN yarn global add pm2
 
 RUN yarn install --production --pure-lockfile
 
