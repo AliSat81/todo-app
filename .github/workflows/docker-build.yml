@@ -59,10 +59,10 @@ jobs:
 
       - name: Deploy to Server
         env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          MONGODB_URL: ${{ secrets.MONGODB_URL }}
-          CLIENT_URL: ${{ secrets.CLIENT_URL }}
-          PORT: ${{ secrets.PORT }}
+        #   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        #   MONGODB_URL: ${{ secrets.MONGODB_URL }}
+        #   CLIENT_URL: ${{ secrets.CLIENT_URL }}
+        #   PORT: ${{ secrets.PORT }}
           DOMAIN: ${{ secrets.DOMAIN }}
           SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}
           SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
@@ -80,13 +80,14 @@ jobs:
             cd todo-app/backend || { echo "Failed to change directory"; exit 1; }
 
             # Create a .env file for Docker Compose
-            echo "MONGODB_URL=${MONGODB_URL}" > .env || { echo "Failed to create .env file"; exit 1; }
-            echo "CLIENT_URL=${CLIENT_URL}" >> .env || { echo "Failed to append CLIENT_URL to .env"; exit 1; }
-            echo "PORT=${PORT}" >> .env || { echo "Failed to append PORT to .env"; exit 1; }
+            echo "MONGODB_URL=${{ secrets.MONGODB_URL }}" > .env || { echo "Failed to create .env file"; exit 1; }
+            echo "CLIENT_URL=${{ secrets.CLIENT_URL }}" >> .env || { echo "Failed to append CLIENT_URL to .env"; exit 1; }
+            echo "PORT=${{ secrets.PORT }}" >> .env || { echo "Failed to append PORT to .env"; exit 1; }
 
             # Load nvm
-            export NVM_DIR="\$HOME/.nvm"
-            [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh" || { echo "Failed to load nvm"; exit 1; }
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
 
             # Use the correct Node.js version
             nvm use 18.0.0 || { echo "Failed to use Node.js version 18.0.0"; exit 1; }
