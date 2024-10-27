@@ -2,7 +2,10 @@ version: '1'
 
 services:
   app:
-    container_name: ts-node-app-prod
+    container_name: todo-app-prod
     build: 
       target: production
     command: yarn start
+    environment:
+    - NODE_ENV=production
+

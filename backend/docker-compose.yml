@@ -1,8 +1,8 @@
-version: '1'
+version: '3'
 
 services:
   app:
-    container_name: ts-node-app
+    container_name: todo-app
     build: 
       context: .
       dockerfile: Dockerfile
@@ -16,13 +16,3 @@ services:
     environment: 
       - MONGODB_URL=${MONGODB_URL}
       - CLIENT_URL=${CLIENT_URL}
-    links: 
-      - mongo  
-    depends_on:
-      - mongo  
-    networks:
-      - backend
-
-networks:
-  backend:
-    driver: bridge    
