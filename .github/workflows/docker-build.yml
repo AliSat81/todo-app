@@ -9,52 +9,57 @@ on:
       - .github/workflows/**
 
 jobs:
-#   build:
-#     runs-on: ubuntu-latest
-#     environment: Production
+  build:
+    runs-on: ubuntu-latest
+    environment: Production
 
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v2
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-#       - name: Set up Docker Buildx
-#         uses: docker/setup-buildx-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
-#       - name: Log in to Docker Hub
-#         uses: docker/login-action@v1
-#         with:
-#           username: ${{ secrets.DOCKER_USERNAME }}
-#           password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        env:
+            MONGODB_URL: ${{ secrets.MONGODB_URL }}
+            CLIENT_URL: ${{ secrets.CLIENT_URL }}
 
-#       - name: Build Docker image
-#         run: |
-#           docker build -t ${{ secrets.DOCKER_USERNAME }}/todo-app:latest ./backend
+      - name: Build Docker image
+        run: |
+            docker build  --build-arg MONGODB_URL=${MONGODB_URL}  --build-arg CLIENT_URL=${CLIENT_URL}  -t ${{ secrets.DOCKER_USERNAME }}/todo-app:latest  ./backend 
 
-#       - name: Push Docker image
-#         run: |
-#           docker push ${{ secrets.DOCKER_USERNAME }}/todo-app:latest
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/todo-app:latest
 
   deploy:
     runs-on: ubuntu-latest
-    # needs: build
+    environment: Production
+    needs: build
 
     steps:
-        - name: Checkout code
-          uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-        - name: Deploy to Server
-          env:
-            SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-            PORT: ${{ secrets.PORT }}
-            DOMAIN: ${{ secrets.DOMAIN }}      
-            SERVER_SSH_PORT:    ${{ secrets.SERVER_SSH_PORT }}
-          run: |
-            sudo apt-get install sshpass -y
-            sshpass -p "${SSH_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DOMAIN} -p ${SERVER_SSH_PORT} "
-            docker pull ${DOCKER_USERNAME}/todo-app:latest &&
-            docker stop todo-app-prod || true &&
-            docker rm todo-app-prod || true &&
-            docker run -d --name todo-app-prod -p ${PORT}:${PORT} ${DOCKER_USERNAME}/todo-app:latest
-            "
+      - name: Deploy to Server
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          PORT: ${{ secrets.PORT }}
+          DOMAIN: ${{ secrets.DOMAIN }}
+          SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
 
+        run: |
+          sudo apt-get install sshpass -y
+          SSHPASS="${SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -p ${SERVER_SSH_PORT} root@${DOMAIN} "
+          docker pull ${DOCKER_USERNAME}/todo-app:latest &&
+          docker stop todo-app-prod || true &&
+          docker rm todo-app-prod || true &&
+          docker run -d --name todo-app-prod -p ${PORT}:${PORT} ${DOCKER_USERNAME}/todo-app:latest
+          "
