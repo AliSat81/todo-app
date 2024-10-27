@@ -51,7 +51,7 @@ jobs:
             SERVER_SSH_PORT:    ${{ secrets.SERVER_SSH_PORT }}
           run: |
             sudo apt-get install sshpass -y
-            sshpass -p "${SSH_PASSWORD}" ssh -o StrictHostKeyChecking=no -p ${SERVER_SSH_PORT} root@${DOMAIN} "
+            sshpass -p "${SSH_PASSWORD}" ssh -o StrictHostKeyChecking=no root@${DOMAIN} -p ${SERVER_SSH_PORT} "
             docker pull ${DOCKER_USERNAME}/todo-app:latest &&
             docker stop todo-app-prod || true &&
             docker rm todo-app-prod || true &&
