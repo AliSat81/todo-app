@@ -50,14 +50,8 @@ jobs:
             DOMAIN: ${{ secrets.DOMAIN }}      
             SERVER_SSH_PORT:    ${{ secrets.SERVER_SSH_PORT }}
           run: |
-            echo "${SSH_PRIVATE_KEY}" > private_key.pem
-            chmod 600 private_key.pem
-            echo "SSH_PRIVATE_KEY: [hidden]"
-            echo "DOCKER_USERNAME: ${DOCKER_USERNAME}"
-            echo "PORT: ${PORT}"
-            echo "DOMAIN: ${DOMAIN}"
-            echo "SERVER_SSH_PORT: ${SERVER_SSH_PORT}"
-            ssh -o StrictHostKeyChecking=no -i private_key.pem -p ${SERVER_SSH_PORT} root@${DOMAIN} "
+            sudo apt-get install sshpass -y
+            sshpass -p "${SSH_PASSWORD}" ssh -o StrictHostKeyChecking=no -p ${SERVER_SSH_PORT} root@${DOMAIN} "
             docker pull ${DOCKER_USERNAME}/todo-app:latest &&
             docker stop todo-app-prod || true &&
             docker rm todo-app-prod || true &&
