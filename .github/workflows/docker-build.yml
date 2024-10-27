@@ -28,15 +28,22 @@ jobs:
         env:
             MONGODB_URL: ${{ secrets.MONGODB_URL }}
             CLIENT_URL: ${{ secrets.CLIENT_URL }}
+            PORT: ${{ secrets.PORT }}
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
 
       - name: Build Docker image
         run: |
-            docker build  --build-arg MONGODB_URL=${MONGODB_URL}  --build-arg CLIENT_URL=${CLIENT_URL}  -t ${{ secrets.DOCKER_USERNAME }}/todo-app:latest  ./backend 
+          # Create a .env file for Docker Compose
+          echo "MONGODB_URL=${MONGODB_URL}" >> .env
+          echo "CLIENT_URL=${CLIENT_URL}" >> .env
+          echo "PORT=${PORT}" >> .env
+          echo "DOCKER_USERNAME=${DOCKER_USERNAME}" >> .env
+          docker-compose -f ./backend/docker-compose.yml -f ./backend/docker-compose.prod.yml up -d --build
 
 
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/todo-app:latest
+          docker-compose -f ./backend/docker-compose.yml -f ./backend/docker-compose.prod.yml push
 
   deploy:
     runs-on: ubuntu-latest
@@ -58,8 +65,8 @@ jobs:
         run: |
           sudo apt-get install sshpass -y
           SSHPASS="${SSH_PASSWORD}" sshpass -e ssh -o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -p ${SERVER_SSH_PORT} root@${DOMAIN} "
-          docker pull ${DOCKER_USERNAME}/todo-app:latest &&
-          docker stop todo-app-prod || true &&
-          docker rm todo-app-prod || true &&
-          docker run -d --name todo-app-prod -p ${PORT}:${PORT} ${DOCKER_USERNAME}/todo-app:latest
+          docker pull alirezasa/todo-app:latest &&
+          docker stop todo-app || true &&
+          docker rm todo-app || true &&
+          docker run -d --name todo-app -p 2087:2087 alirezasa/todo-app:latest
           "

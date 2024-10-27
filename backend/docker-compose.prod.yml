@@ -1,8 +1,9 @@
-version: '1'
+version: '3'
 
 services:
   app:
-    container_name: todo-app-prod
+    container_name: todo-app
+    image: ${DOCKER_USERNAME}/todo-app:latest
     build: 
       target: production
     command: yarn start
