@@ -2,7 +2,7 @@
 
 A full-stack, interactive task management application designed to enhance productivity and task organization. This app allows users to create, update, organize, and track tasks, with features like drag-and-drop sorting, status grouping, and customizable task ordering.
 
-![App Screenshot](screenshot\Screenshot.png?raw=true)
+![App Screenshot](./screenshot/Screenshot.png?raw=true)
 
 
 ## Features
