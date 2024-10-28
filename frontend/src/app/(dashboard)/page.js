@@ -41,17 +41,20 @@ const DraggableCard = React.memo(({
   onDragStart,
   onDragEnter,
   onDragEnd,
-  onDrop 
+  onDrop,
+  columnStatus,
+  mainColumn,
 }) => (
   <div
     key={row.id || index}
     draggable
-    onDragStart={() => onDragStart(index)}
-    onDragOver={(e) => {
-      e.preventDefault();
+    onDragStart={() => onDragStart(index, columnStatus)}
+    onDragOver={(e) => e.preventDefault()}
+    onDragEnter={() => {
+      if(row.status !== mainColumn) return;
+      onDragEnter(index)
     }}
-    onDragEnter={() => onDragEnter(index)}
-    onDragEnd={() => onDragEnd(index)}
+    onDragEnd={() => onDragEnd()}
     onDrop={(e) => {
       e.preventDefault();
       onDrop(index);
@@ -69,70 +72,54 @@ const DraggableCard = React.memo(({
 DraggableCard.displayName = 'DraggableCard';
 
 const Column = React.memo(({ title, tasks, isLoading = false }) => {
-  const [items, setItems] = React.useState(tasks);
-  const [draggedIndex, setDraggedIndex] = React.useState(null);
-  const [hoveredIndex, setHoveredIndex] = React.useState(null);
-
-  React.useEffect(() => {
-    setItems(tasks);
-  }, [tasks]);
-
-  const handleDragStart = (index) => {
-    setDraggedIndex(index);
-  };
-
-  const handleDrop = (dropIndex) => {
-    if (draggedIndex === null) return;
-
-    const newItems = [...items];
-    const [draggedItem] = newItems.splice(draggedIndex, 1);
-    newItems.splice(dropIndex, 0, draggedItem);
-
-    setItems(newItems);
-    setDraggedIndex(null);
-    setHoveredIndex(null);
-
-    // TODO
-    // dispatch(updateOrder([]));
-  };
-  
+  const {
+    items,
+    handleDragStart,
+    handleDrop,
+    setHoveredIndex,
+    draggedIndex,
+    hoveredIndex,
+    mainColumn,
+  } = useDragAndDrop(tasks, statusFormatter(title));
   return (
     <Grid item xs={12} sm={6} md={4} lg={3}>
       <Box sx={styles.columnHeader}>
-        <Typography 
-          variant="h6" 
-          gutterBottom 
-          align="center" 
-          sx={styles.title}
-        >
-          {title}
-        </Typography>
-        <Tooltip title="Add Item">
-          <Link href={{ pathname: '/task', query: { status: title } }}>
-            <IconButton>
-              <Add />
-            </IconButton>
-          </Link>
-        </Tooltip>
-      </Box>
-      <Grid container justifyContent="center">
-        <Grid item>
-          {items?.map((row, index) => (
-            <DraggableCard
-              key={row.id || index}
-              row={row}
-              index={index}
-              isDragging={index === draggedIndex}
-              isHovered={index === hoveredIndex}
-              isLoading={isLoading}
-              onDragStart={handleDragStart}
-              onDragEnter={setHoveredIndex}
-              onDragEnd={() => setDraggedIndex(null)}
-              onDrop={handleDrop}
-            />
-          ))}
+          <Typography 
+            variant="h6" 
+            gutterBottom 
+            align="center" 
+            sx={styles.title}
+          >
+            {title}
+          </Typography>
+          <Tooltip title="Add Item">
+            <Link href={{ pathname: '/task', query: { status: title } }}>
+              <IconButton>
+                <Add />
+              </IconButton>
+            </Link>
+          </Tooltip>
+        </Box>
+        <Grid container justifyContent="center">
+          <Grid item>
+            {items?.map((row, index) => (
+              <DraggableCard
+                key={row.id || index}
+                row={row}
+                index={index}
+                isDragging={index === draggedIndex}
+                isHovered={index === hoveredIndex}
+                isLoading={isLoading}
+                onDragStart={handleDragStart}
+                onDragEnter={setHoveredIndex}
+                onDragEnd={() => setHoveredIndex(null)}
+                onDrop={handleDrop}
+                columnStatus={title}
+                mainColumn={mainColumn}
+              />
+            ))}
+          </Grid>
         </Grid>
-      </Grid>
     </Grid>
   );
 });

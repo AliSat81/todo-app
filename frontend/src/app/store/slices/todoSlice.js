@@ -38,7 +38,7 @@ export const fetchTodos = createAsyncThunk(
   "todo/fetchTodos",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.get("/task?groupBy=status");
+      const response = await axiosInstance.get("/task?groupBy=status&sortBy=order%3Adesc");
       return response?.data?.results;
     } catch (error) {
       return rejectWithValue(handleApiError(error));
@@ -92,6 +92,19 @@ export const deleteTask = createAsyncThunk(
     try {
       await axiosInstance.delete(`/task/${taskId}`);
       return { taskId, status };
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// Async action to delete task
+export const swapTask = createAsyncThunk(
+  "todo/swapTask",
+  async ({ ids, status }, { rejectWithValue }) => {
+    try {
+      await axiosInstance.patch(`/task/swap`, { ids });
+      return { ids, status };
     } catch (error) {
       return rejectWithValue(handleApiError(error));
     }
@@ -238,6 +251,38 @@ const todoSlice = createSlice(
             .addCase(deleteTask.rejected, (state, action) => {
               state.loading.deleteTask = false;
               state.error.deleteTask = action.payload;
+            })
+            .addCase(swapTask.pending, (state) => {
+              state.loading.swapTask = true;
+              state.error.swapTask = null;
+            })
+            .addCase(swapTask.fulfilled, (state, action) => {
+              state.loading.updateTaskStatus = false;
+              state.error.updateTaskStatus = null;
+            
+              const ids = action.payload.ids;
+              const status = action.payload.status;
+              
+              const firstTaskIndex = state.data[status].findIndex(task => task.id === ids[0]);
+              const secondTaskIndex = state.data[status].findIndex(task => task.id === ids[1]);
+              
+              if (firstTaskIndex !== -1 && secondTaskIndex !== -1) {
+                const firstTask = { ...state.data[status][firstTaskIndex] };
+                const secondTask = { ...state.data[status][secondTaskIndex] };
+                
+                const tempOrder = firstTask.order;
+                firstTask.order = secondTask.order;
+                secondTask.order = tempOrder;
+                
+                state.data[status][firstTaskIndex] = secondTask;
+                state.data[status][secondTaskIndex] = firstTask;
+              }
+              
+              state.lastUpdated = new Date().toISOString();
+            })
+            .addCase(swapTask.rejected, (state, action) => {
+              state.loading.swapTask = false;
+              state.error.swapTask = action.payload;
             });
         },
     }
